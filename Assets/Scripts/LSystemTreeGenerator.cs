@@ -9,6 +9,9 @@ public class LSystemTreeGenerator : MonoBehaviour
         TwoD,
         ThreeD
     }
+    [Header("Variación Orgánica")]
+    [Tooltip("Variación aleatoria que se sumará o restará al ángulo base de cada árbol.")]
+    [SerializeField] private float angleVariance = 10f;
 
     /*private void Start()
     {
@@ -213,42 +216,29 @@ public class LSystemTreeGenerator : MonoBehaviour
         string activeAxiom;
         List<LSystemRule> activeRules;
         int activeIterations;
-        float activeAngle;
+        float baseAngle;
 
 
-        if (generationMode ==
-            GenerationMode.TwoD)
+        if (generationMode == GenerationMode.TwoD)
         {
-            activeAxiom =
-                axiom2D;
-
-            activeRules =
-                rules2D;
-
-            activeIterations =
-                iterations2D;
-
-            activeAngle =
-                angle2D;
+            activeAxiom = axiom2D;
+            activeRules = rules2D;
+            activeIterations = iterations2D;
+            baseAngle = angle2D;
         }
         else
         {
-            activeAxiom =
-                axiom3D;
-
-            activeRules =
-                rules3D;
-
-            activeIterations =
-                iterations3D;
-
-            activeAngle =
-                angle3D;
+            activeAxiom = axiom3D;
+            activeRules = rules3D;
+            activeIterations = iterations3D;
+            baseAngle = angle3D;
         }
 
+        //  Añadimos una variación aleatoria única para este árbol específico
+        float activeAngle = baseAngle + Random.Range(-angleVariance, angleVariance);
 
-        List<string> derivation =
-            new List<string>();
+
+        List<string> derivation = new List<string>();
 
 
         string sequence =
