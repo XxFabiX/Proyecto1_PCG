@@ -234,7 +234,6 @@ public class TerrainGenerator : MonoBehaviour
     private void ApplyHeightColors(float[,] heights)
     {
         TerrainData terrainData = generatedTerrain.terrainData;
-
         EnsureHeightLayers();
 
         terrainData.terrainLayers = new TerrainLayer[]
@@ -244,11 +243,7 @@ public class TerrainGenerator : MonoBehaviour
             highLayer
         };
 
-        lowThreshold = Mathf.Clamp01(lowThreshold);
-        highThreshold = Mathf.Clamp(highThreshold, lowThreshold + 0.01f, 1f);
-
         terrainData.alphamapResolution = ALPHAMAP_RESOLUTION;
-
         float[,,] alphamaps = new float[ALPHAMAP_RESOLUTION, ALPHAMAP_RESOLUTION, 3];
         int heightResolution = heights.GetLength(0);
 
@@ -256,34 +251,25 @@ public class TerrainGenerator : MonoBehaviour
         {
             for (int x = 0; x < ALPHAMAP_RESOLUTION; x++)
             {
-                int heightX = Mathf.RoundToInt(
-                    x / (float)(ALPHAMAP_RESOLUTION - 1) * (heightResolution - 1)
-                );
-
-                int heightY = Mathf.RoundToInt(
-                    y / (float)(ALPHAMAP_RESOLUTION - 1) * (heightResolution - 1)
-                );
+                int heightX = Mathf.RoundToInt(x / (float)(ALPHAMAP_RESOLUTION - 1) * (heightResolution - 1));
+                int heightY = Mathf.RoundToInt(y / (float)(ALPHAMAP_RESOLUTION - 1) * (heightResolution - 1));
 
                 float height = heights[heightY, heightX];
 
-                if (height < lowThreshold)
+                // El índice 0 (Low Color) se deja vacío para el camino.
+                if (height < highThreshold)
                 {
-                    alphamaps[y, x, 0] = 1f;
-                }
-                else if (height < highThreshold)
-                {
-                    alphamaps[y, x, 1] = 1f;
+                    alphamaps[y, x, 1] = 1f; // Índice 1: Middle Color (Terreno)
                 }
                 else
                 {
-                    alphamaps[y, x, 2] = 1f;
+                    alphamaps[y, x, 2] = 1f; // Índice 2: High Color (Nieve)
                 }
             }
         }
 
         terrainData.SetAlphamaps(0, 0, alphamaps);
     }
-
     private void ClearHeightColors()
     {
         if (generatedTerrain == null)

@@ -4,64 +4,77 @@ using UnityEngine;
 public class RandomWalkGenerator : MonoBehaviour
 {
     [Header("Parámetros del Sendero Procedural")]
+    [Tooltip("Usa un valor MUY ALTO (ej. 3000 o 5000) para que tenga tiempo de explorar todo el mapa.")]
+    public int maxSteps = 3000;
+    public int pathWidth = 2; // Usa 2 para evitar el patrón cuadriculado/punteado
 
-    public int maxSteps = 350;
+    [Range(0f, 0.05f)]
+    public float pathDepth = 0.01f;
 
+    [Header("Comportamiento Orgánico")]
+    [Tooltip("Probabilidad de girar levemente (0 a 100).")]
     [Range(0f, 100f)]
     public float directionChangeProbability = 15f;
 
-    [Tooltip("Grosor del camino. 1 = 3 vértices de ancho.")]
-    public int pathWidth = 1;
-
-    [Tooltip("Qué tanto se hunde el camino respecto al terreno original. Un valor de 0.005 crea una huella sutil sin romper la montaña.")]
-    [Range(0f, 0.05f)]
-    public float pathDepth = 0.005f;
+    [Range(0f, 1f)]
+    public float flattenStrength = 0.6f;
 
     public HashSet<Vector2Int> pathPositions { get; private set; } = new HashSet<Vector2Int>();
+
+    // Las 8 direcciones posibles (N, NE, E, SE, S, SO, O, NO)
+    private Vector2Int[] directions = {
+        new Vector2Int(0, 1),
+        new Vector2Int(1, 1),
+        new Vector2Int(1, 0),
+        new Vector2Int(1, -1),
+        new Vector2Int(0, -1),
+        new Vector2Int(-1, -1),
+        new Vector2Int(-1, 0),
+        new Vector2Int(-1, 1)
+    };
 
     public void CarvePath(float[,] heights)
     {
         pathPositions.Clear();
         int resolution = heights.GetLength(0);
 
-        Vector2Int currentPos = new Vector2Int(10, resolution / 2);
-        Vector2Int[] directions = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+        // Empezamos en un punto aleatorio del mapa, lejos de los bordes
+        Vector2Int currentPos = new Vector2Int(Random.Range(10, resolution - 10), Random.Range(10, resolution - 10));
 
-        Vector2Int currentDir = Vector2Int.right;
-        Vector2Int lastDir = currentDir;
+        // Empezamos apuntando en una dirección aleatoria
+        int currentDirIndex = Random.Range(0, 8);
 
         for (int i = 0; i < maxSteps; i++)
         {
             CarveArea(heights, currentPos, resolution);
 
-            currentPos += currentDir;
-
-            if (currentPos.x < 2 || currentPos.x >= resolution - 2 ||
-                currentPos.y < 2 || currentPos.y >= resolution - 2)
-            {
-                break;
-            }
-
+            // Inercia Direccional: El caminante gira suavemente de a 45 grados
             if (Random.Range(0f, 100f) < directionChangeProbability)
             {
-                List<Vector2Int> validDirs = new List<Vector2Int>();
-
-                foreach (Vector2Int dir in directions)
-                {
-                    if (dir != -lastDir)
-                    {
-                        validDirs.Add(dir);
-                    }
-                }
-
-                currentDir = validDirs[Random.Range(0, validDirs.Count)];
-                lastDir = currentDir;
+                int turn = (Random.value > 0.5f) ? 1 : -1;
+                currentDirIndex = (currentDirIndex + turn + 8) % 8;
             }
+
+            Vector2Int nextPos = currentPos + directions[currentDirIndex];
+
+            // SISTEMA DE REBOTE: Si choca con los límites, NO HACEMOS BREAK. 
+            // Obligamos a la dirección a dar un giro brusco hacia el interior y saltamos el paso.
+            if (nextPos.x <= pathWidth + 1 || nextPos.x >= resolution - pathWidth - 2 ||
+                nextPos.y <= pathWidth + 1 || nextPos.y >= resolution - pathWidth - 2)
+            {
+                // Sumar entre 3 y 5 índices asegura que el caminante se dé la vuelta (rebote de entre 135 y 225 grados)
+                currentDirIndex = (currentDirIndex + Random.Range(3, 6)) % 8;
+                continue;
+            }
+
+            currentPos = nextPos;
         }
     }
 
     private void CarveArea(float[,] heights, Vector2Int center, int resolution)
     {
+        float centerHeight = heights[center.y, center.x] - pathDepth;
+
         for (int x = center.x - pathWidth; x <= center.x + pathWidth; x++)
         {
             for (int y = center.y - pathWidth; y <= center.y + pathWidth; y++)
@@ -71,9 +84,17 @@ public class RandomWalkGenerator : MonoBehaviour
                     Vector2Int pos = new Vector2Int(x, y);
                     pathPositions.Add(pos);
 
-                    // SOLUCIÓN AL HOYO: Ahora simplemente restamos un valor muy pequeño (pathDepth)
-                    // a la altura que ya existe. Así el camino sube y baja con la montaña.
-                    heights[y, x] = Mathf.Clamp01(heights[y, x] - pathDepth);
+                    float distance = Vector2.Distance(new Vector2(center.x, center.y), new Vector2(x, y));
+                    if (distance <= pathWidth)
+                    {
+                        float falloff = 1f - (distance / (float)Mathf.Max(1, pathWidth));
+                        falloff = Mathf.SmoothStep(0f, 1f, falloff);
+
+                        float targetHeight = heights[y, x] - (pathDepth * falloff);
+                        targetHeight = Mathf.Lerp(targetHeight, centerHeight, falloff * flattenStrength);
+
+                        heights[y, x] = Mathf.Clamp01(targetHeight);
+                    }
                 }
             }
         }
