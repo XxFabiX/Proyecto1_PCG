@@ -406,37 +406,35 @@ public class WorldManager : MonoBehaviour
     // =========================================================================
 
     public void ClearWorld()
-
     {
-
+        // 1. Borramos todos los árboles de la lista registrada
         foreach (GameObject tree in spawnedTrees)
-
         {
-
             if (tree != null)
-
             {
-
                 if (Application.isPlaying) Destroy(tree);
-
                 else DestroyImmediate(tree);
-
             }
-
         }
-
         spawnedTrees.Clear();
 
-
-
-        if (terrainGenerator != null)
-
+        // 2. BARRIDO DE SEGURIDAD: Eliminamos cualquier residuo que haya quedado colgado en este transform
+        for (int i = transform.childCount - 1; i >= 0; i--)
         {
-
-            terrainGenerator.DeleteTerrain();
-
+            Transform child = transform.GetChild(i);
+            // Si el objeto hijo se llama como los árboles generados o contiene "Arbol", lo borramos
+            if (child.name.Contains("Arbol_Procedural") || child.name.Contains("Generated Tree"))
+            {
+                if (Application.isPlaying) Destroy(child.gameObject);
+                else DestroyImmediate(child.gameObject);
+            }
         }
 
+        // 3. Borramos el terreno anterior
+        if (terrainGenerator != null)
+        {
+            terrainGenerator.DeleteTerrain();
+        }
     }
 
 }
