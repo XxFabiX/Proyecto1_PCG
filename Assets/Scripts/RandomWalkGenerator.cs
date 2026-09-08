@@ -60,10 +60,11 @@ public class RandomWalkGenerator : MonoBehaviour
             // SISTEMA DE REBOTE: Si choca con los límites, NO HACEMOS BREAK. 
             // Obligamos a la dirección a dar un giro brusco hacia el interior y saltamos el paso.
             if (nextPos.x <= pathWidth + 1 || nextPos.x >= resolution - pathWidth - 2 ||
-                nextPos.y <= pathWidth + 1 || nextPos.y >= resolution - pathWidth - 2)
+                  nextPos.y <= pathWidth + 1 || nextPos.y >= resolution - pathWidth - 2)
             {
-                // Sumar entre 3 y 5 índices asegura que el caminante se dé la vuelta (rebote de entre 135 y 225 grados)
-                currentDirIndex = (currentDirIndex + Random.Range(3, 6)) % 8;
+                // Sumar 2 índices (+90°) o 6 índices (-90°)
+                int turnAngle = (Random.value > 0.5f) ? 2 : 6;
+                currentDirIndex = (currentDirIndex + turnAngle) % 8;
                 continue;
             }
 
